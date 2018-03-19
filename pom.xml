@@ -1,0 +1,340 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>dminahan.spark</groupId>
+  <artifactId>ml</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <name>ml-test</name>
+  <!--name>[${porject.packaging}] ${project.groupId}:${project.artifactId}:${project.version}</name-->
+  <description>spark ml test</description>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <java.version>1.8</java.version>
+    <hadoop.version>2.6.0-cdh5.8.2</hadoop.version>
+    <accumulo.version>1.8.0</accumulo.version>
+    <!-- ***************** -->
+    <!-- Spark/Scala Props -->
+    <!-- ***************** -->
+    <spark.version>2.2.0</spark.version>
+    <scala.compat.version>2.11</scala.compat.version>
+    <scala.version>2.11.8</scala.version>
+
+    <!-- ***************** -->
+    <!-- Logginga Props    -->
+    <!-- ***************** -->
+    <log4j.version>2.10.0</log4j.version>
+    <slf4j.version>1.7.25</slf4j.version>
+    
+    <!-- ********************* -->
+    <!-- Maven Resources Props -->
+    <!-- ********************* -->
+    <resources.sources.input.dir>src/main/external-reosurces</resources.sources.input.dir>
+    <resources.sources.output.dir>${basedir}/target</resources.sources.output.dir>
+    
+   <!-- ************************ -->
+   <!-- maven-shade plugin Props -->
+   <!-- ************************ -->
+   <shaded.jar.name>${project.build.finalName}-shaded.jar</shaded.jar.name>
+   <shaded.jar.build.path>${project.build.directory}/${shaded.jar.name}</shaded.jar.build.path>
+   <shaded.main.class.name>dminahan.spark.ml.App</shaded.main.class.name>
+
+  </properties>
+  
+  <build>
+    <filters>
+      <filter>profiles/${build.profile.id}/config.properties</filter>
+    </filters>
+    <resources>
+      <resource>
+        <filtering>true</filtering>
+        <directory>src/main/resources</directory>
+      </resource>
+    </resources>
+     <!--<pluginManagement>-->
+         <plugins>
+            <!-- Shaded Jar Plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugin</groupId>
+                <artifactId>maven.shade-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                   <execution>
+                      <id>shade</id>
+                      <phase>package</phase>
+                      <goals>
+                         <goal>shade</goal>
+                      </goals>
+                   </execution>
+                </executions>
+                <configuration>
+                   <outputFile>${shaded.jar.build.path}</outputFile>
+                   <transformers>
+                      <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                         <mainClass>${shaded.main.class.name}</mainClass>
+                      </transformer>
+                   </transformers>
+                   <filters>
+                      <filter>
+                         <artifact>*:*</artifact>
+                         <excludes>
+                            <exclude>META-INF/maven/**</exclude>
+                            <exclude>META-INF/*.SF</exclude>
+                            <exclude>META-INF/*.DSA</exclude>
+                            <exclude>META-INF/*.RSA</exclude>
+                         </excludes>
+                      </filter>
+                   </filters>
+                </configuration>
+            </plugin>
+            <!-- Resources Plugin -->
+            <plugin>
+               <groupId>org.apache.maven.plugins</groupId>
+               <artifactId>maven-resources-plugin</artifactId>
+               <version>3.0.2</version>
+               <executions>
+                  <execution>
+                     <id>filter-and-copy-scripts</id>
+                     <phase>generate-sources</phase>
+                     <goals>
+                        <goal>copy-resources</goal>
+                     </goals>
+                     <configuration>
+                        <resources>
+                           <resource>
+                              <directory>${resources.sources.input.dir}</directory>
+                              <filtering>true</filtering>
+                           </resource>
+                        </resources>
+                        <outputDirectory>${resources.sources.output.dir}</outputDirectory>
+                     </configuration>
+                  </execution>
+               </executions>
+            </plugin>
+           <plugin>
+             <groupId>org.apache.maven.plugins</groupId>
+             <artifactId>maven-site-plugin</artifactId>
+           </plugin>
+           <!--plugin>
+             <groupId>org.apache.maven.plugins</groupId>
+             <artifactId>maven-compiler-plugin</artifactId>
+             <configuration>
+               <source>1.8</source>
+               <target>1.8</target>
+             </configuration>
+           </plugin-->
+           <plugin>
+             <artifactId>maven-surefire-plugin</artifactId>
+             <version>2.12.4</version>
+             <dependencies>
+               <dependency>
+                 <groupId>org.apache.maven.surefire</groupId>
+                 <artifactId>surefire-junit47</artifactId>
+                 <version>2.0.1</version>
+               </dependency>
+               <configuration>
+                 <includes>
+                   <include>**/*Test*.java</include>
+                 </includes>
+               </configuration>
+               <executions>
+                 <execution>
+                   <id>default-test</id>
+                   <phase>test</phase>
+                   <goals>
+                     <goal>test</goal>
+                   </goals>
+                 </execution>
+               </executions>
+             </dependencies>
+           </plugin>
+            <!-- antrun plugin, probably remove as I don't need this -->
+            <plugin>
+              <groupId>org.apache.maven.plugin</groupId>
+              <artifactId>maven-antrun-plugin</artifactId>
+              <version>1.8</version>
+              <executions>
+                 <execution>
+                      <id>chmod-on-run-script</id>
+                      <phase>prepare-package</phase>
+                      <goals>
+                          <goal>run</goal>
+                      </goals>
+                      <configuration>
+                          <target>
+                            <chmod file="${project.build.directory}/run.sh" perm="750" />
+                          </target>
+                      </configuration>
+                   </execution>
+              </executions>
+            </plugin>
+         </plugins>
+         
+         <!-- For all sub-modules, automatically shade them, use resource filtering, and chmod run.sh; this will apply to the parent too -->
+         <!-- <plugin>
+            <groupId>org.apache.maven.plugin</groupId>
+            <artifactId>maven-shade-plugin</artifactId>
+         </plugin>
+         <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-resources-plugin</artifactId>
+         </plugin>
+         <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+         </plugin> -->
+     <!--</pluginManagement>-->
+  </build>
+
+  <dependencies>
+  <!-- https://mvnrepository.com/artifact/junit/junit -->
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.12</version>
+      <scope>test</scope>
+    </dependency>
+    
+    <!-- Commons -->
+    <dependency>
+       <groupId>org.apache.commons</groupId>
+       <artifactId>commons-lang3</artifactId>
+       <version>3.6</version>
+    </dependency>
+    
+    <!-- Spark -->
+    <dependency>
+        <groupId>org.apache.spark</groupId>
+        <artifactId>spark-core_${scala.compat.version}</artifactId>
+        <version>${spark.version}</version>
+        <scope>provided</scope>
+        <exclusions>
+          <exclusion>
+            <groupId>org.xerial.snappy</groupId>
+            <artifactId>snappy-java</artifactId>
+          </exclusion>
+        </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.xerial.snappy</groupId>
+      <artifactId>snappy-java</artifactId>
+      <version>1.1.2.6</version>
+    </dependency>
+    <dependency>
+        <groupId>org.apache.spark</groupId>
+        <artifactId>spark-tags_${scala.compat.version}</artifactId>
+        <version>${spark.version}</version>
+        <scope>provided</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.apache.spark</groupId>
+        <artifactId>spark-mllib_${scala.compat.version}</artifactId>
+        <version>${spark.version}</version>
+        <scope>provided</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.apache.spark</groupId>
+        <artifactId>spark-sql_${scala.compat.version}</artifactId>
+        <version>${spark.version}</version>
+        <scope>provided</scope>
+    </dependency>
+    <!-- Only Needed for Spark Streaming -->
+    <dependency>
+        <groupId>org.apache.spark</groupId>
+        <artifactId>spark-streaming_${scala.compat.version}</artifactId>
+        <version>${spark.version}</version>
+        <scope>provided</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.apache.spark</groupId>
+        <artifactId>spark-streaming-kafka-0-8_${scala.compat.version}</artifactId>
+        <version>${spark.version}</version>
+        <scope>provided</scope>        
+    </dependency>
+    <!-- DataFrame/Dataset tets need Hive dependency added for Spark2 -->
+    <dependency>
+        <groupId>org.apache.spark</groupId>
+        <artifactId>spark-hive_${scala.compat.version}</artifactId>
+        <version>${spark.version}</version>
+        <scope>provided</scope>
+    </dependency>
+    
+    <!-- spark testing base -->
+    <dependency>
+       <groupId>com.holdenkarau</groupId>
+       <artifactId>spark-testing-base_${scala.compat.version}</artifactId>
+       <version>${spark.version}_0.8.0</version>
+       <scope>test</scope>
+    </dependency>
+    <dependency>
+       <groupId>org.hamcrest</groupId>
+       <artifactId>hamcrest-core</artifactId>
+       <version>1.3</version>
+       <scope>test</scope>
+    </dependency>    
+    <dependency>
+       <groupId>org.hamcrest</groupId>
+       <artifactId>hamcrest-all</artifactId>
+       <version>1.3</version>
+       <scope>test</scope>
+    </dependency>    
+
+<!-- Mapreduce -->
+    <dependency>
+       <groupId>org.apache.hadoop</groupId>
+       <artifactId>hadoop-mapreduce-client-core</artifactId>
+       <version>2.6.0-cdh5.8.2</version>
+        <scope>provided</scope>
+    </dependency>
+    
+    <!-- Accumulo -->
+    <dependency>
+       <groupId>org.apache.accumulo</groupId>
+       <artifactId>accumulo-core</artifactId>
+       <version>${accumulo.version}/version>
+    </dependency>
+    <dependency>
+       <groupId>org.apache.accumulo</groupId>
+       <artifactId>accumulo-minicluster</artifactId>
+       <version>${accumulo.version}/version>
+        <scope>test</scope>
+    </dependency>
+
+<!--Logging -->
+    <dependency>
+       <groupId>org.slf4j</groupId>
+       <artifactId>slf4j-api</artifactId>
+       <version>${slf4j.version}</version>
+    </dependency>
+    <dependency>
+       <groupId>org.slf4j</groupId>
+       <artifactId>slf4j-log4j12</artifactId>  <!-- adapter bridge for log4j1 or 2 -->
+       <version>${slf4j.version}</version>
+    </dependency>
+    <dependency>
+       <groupId>org.apache.logging.log4j</groupId>
+       <artifactId>log4j-api</artifactId>
+       <version>${log4j.version}</version>
+    </dependency>
+    <dependency>
+       <groupId>org.apache.logging.log4j</groupId>
+       <artifactId>log4j-core</artifactId>
+       <version>${log4j.version}</version>
+    </dependency>
+    <dependency>
+       <groupId>org.apache.logging.log4j</groupId> <!-- should pick up logging for enaything that  uses jarkarta commons logging -->
+       <artifactId>log4j-jcl</artifactId>
+       <version>${log4j.version}</version>
+    </dependency>
+    <dependency>
+       <groupId>commons-logging</groupId>
+       <artifactId>commons-logging</artifactId>
+       <version>1.1.3</version>
+       <scope>provided</scope>
+    </dependency>
+   </dependencies>
+</project>
